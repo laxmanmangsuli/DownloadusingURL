@@ -1,369 +1,147 @@
 package com.example
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.databinding.ActivityMainBinding
 import com.kdownloader.KDownloader
-import com.kdownloader.Status
 
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        private const val TAG = "MainActivity"
-    }
 
     private lateinit var binding: ActivityMainBinding
-
-    lateinit var dirPath: String
-    private var downloadId1 = 0
-    private var downloadId2 = 0
-    private var downloadId3 = 0
-    private var downloadId4 = 0
-    private var downloadId5 = 0
-    private var downloadId6 = 0
-
+    val REQUEST_WRITE_PERMISSION = 101
+    val STORAGE_PERMISSION_REQUEST_CODE = 10
     private lateinit var kDownloader: KDownloader
-
+    private lateinit var dirPath: String
+    private var urlCounterMap: MutableMap<String, Int> = mutableMapOf()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        kDownloader = (applicationContext as MyApplication).kDownloader
-        dirPath = Environment.getExternalStorageDirectory().path + "/Download"
+        kDownloader = KDownloader.create(this)
 
-        val request1 = kDownloader.newRequestBuilder(
-            "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_30mb.mp4", dirPath, "bunny.mp4",
-        ).tag(TAG + "1").build()
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE),
+                1
+            )
+        }
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                1
+            )
+        }
 
-        val request2 = kDownloader.newRequestBuilder(
-            "https://speed.hetzner.de/100MB.bin", dirPath, "100MB.bin",
-        ).tag(TAG + "2").build()
+        val itemList = mutableListOf<DownloadedFile>()
 
-        val request3 = kDownloader.newRequestBuilder(
-            "https://file-examples.com/storage/fe3286c49f6458f86eb9ed5/2017/10/file-example_PDF_1MB.pdf", dirPath, "docu.pdf",
-        ).tag(TAG + "3").build()
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
-        val request4 = kDownloader.newRequestBuilder(
-            "https://media.giphy.com/media/Bk0CW5frw4qfS/giphy.gif", dirPath, "giphy.gif",
-        ).tag(TAG + "4").build()
-
-        val request5 = kDownloader.newRequestBuilder(
-            "https://speed.hetzner.de/1GB.bin", dirPath, "1GB.bin",
-        ).tag(TAG + "5").build()
-
-        val request6 = kDownloader.newRequestBuilder(
-            "https://file-examples.com/storage/fe3286c49f6458f86eb9ed5/2017/11/file_example_MP3_5MG.mp3", dirPath, "music.mp3",
-        ).tag(TAG + "6").build()
+        val adapter = DownloadedFilesAdapter(this)
+        recyclerView.adapter = adapter
 
 
 
-        // REQUEST1
 
-        binding.fileName1.text = "bunny.mp4"
-        binding.startCancelButton1.setOnClickListener {
-            if (binding.startCancelButton1.text.equals("Start")) {
-                downloadId1 = kDownloader.enqueue(request1,
-                    onStart = {
-                        binding.status1.text = "Started"
-                        binding.startCancelButton1.text = "Cancel"
-                        binding.resumePauseButton1.isEnabled = true
-                        binding.resumePauseButton1.visibility = View.VISIBLE
-                        binding.resumePauseButton1.text = "Pause"
-                    },
-                    onProgress = {
-                        binding.status1.text = "In Progress"
-                        binding.progressBar1.progress = it
-                        binding.progressText1.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status1.text = "Completed"
-                        binding.progressText3.text = "100%"
-                        binding.startCancelButton1.visibility = View.GONE
-                        binding.resumePauseButton1.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status1.text = "Error : $it"
-                        binding.resumePauseButton1.visibility = View.GONE
-                        binding.progressBar1.progress = 0
-                        binding.progressText1.text = "0%"
-                    },
-                    onPause = {
-                        binding.status1.text = "Paused"
+
+        binding.btnDownload.setOnClickListener {
+            val url = binding.url.text.toString().trim()
+
+            dirPath = Environment.getExternalStorageDirectory().path + "/Download"
+            val uri = Uri.parse(url)
+            var fileName = uri.lastPathSegment ?: "defaultFileName"
+            val counter = urlCounterMap[url] ?: 0
+            fileName = if (counter!! >= 1) {
+                "${
+                    uri.lastPathSegment?.substringBeforeLast(
+                        '.',
+                        ""
+                    )
+                }($counter).${fileName.substringAfterLast('.', "")}"
+            } else {
+                "${uri.lastPathSegment?.substringBeforeLast('.', "")}.${
+                    fileName.substringAfterLast(
+                        '.',
+                        ""
+                    )
+                }"
+            }
+
+            val requestBuilder = when (fileName.substringAfterLast('.', "").toLowerCase()) {
+                "mp4" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "bin" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "jpg", "png", "jpeg" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "pdf" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "exe" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "gif" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                "mp3" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
+                else -> {
+                    Toast.makeText(this, "Unsupported file type", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }.build()
+            itemList.add(DownloadedFile(url=url, request = requestBuilder, fileName = fileName))
+            adapter.addDownloadTask(DownloadedFile(url=url, request = requestBuilder, fileName = fileName))
+            binding.url.text.clear()
+
+        }
+        requestPermission()
+    }
+
+
+
+
+    private fun requestPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                REQUEST_WRITE_PERMISSION
+            )
+        } else {
+
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            STORAGE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && permissions[0] == android.Manifest.permission.WRITE_EXTERNAL_STORAGE) {
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
                     }
-                )
-            } else {
-                kDownloader.cancel(downloadId1)
-                binding.startCancelButton1.text = "Start"
+                }
+            }
+
+            else -> {
+
             }
         }
-
-        binding.resumePauseButton1.setOnClickListener{
-            if (kDownloader.status(downloadId1) == Status.PAUSED) {
-                binding.resumePauseButton1.text = "Pause"
-                kDownloader.resume(downloadId1)
-            } else {
-                binding.resumePauseButton1.text = "Resume"
-                kDownloader.pause(downloadId1)
-            }
-        }
-
-        // REQUEST2
-
-        binding.fileName2.text = "100MB.bin"
-        binding.startCancelButton2.setOnClickListener {
-            if (binding.startCancelButton2.text.equals("Start")) {
-                downloadId2 = kDownloader.enqueue(request2,
-                    onStart = {
-                        binding.status2.text = "Started"
-                        binding.startCancelButton2.text = "Cancel"
-                        binding.resumePauseButton2.isEnabled = true
-                        binding.resumePauseButton2.visibility = View.VISIBLE
-                        binding.resumePauseButton2.text = "Pause"
-                    },
-                    onProgress = {
-                        binding.status2.text = "In Progress"
-                        binding.progressBar2.progress = it
-                        binding.progressText2.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status2.text = "Completed"
-                        binding.progressText3.text = "100%"
-                        binding.startCancelButton2.visibility = View.GONE
-                        binding.resumePauseButton2.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status2.text = "Error : $it"
-                        binding.resumePauseButton2.visibility = View.GONE
-                        binding.progressBar2.progress = 0
-                        binding.progressText2.text = "0%"
-                    },
-                    onPause = {
-                        binding.status2.text = "Paused"
-                    }
-                )
-            } else {
-                kDownloader.cancel(downloadId2)
-                binding.startCancelButton2.text = "Start"
-            }
-        }
-
-        binding.resumePauseButton2.setOnClickListener{
-            if (kDownloader.status(downloadId2) == Status.PAUSED) {
-                binding.resumePauseButton2.text = "Pause"
-                kDownloader.resume(downloadId2)
-            } else {
-                binding.resumePauseButton2.text = "Resume"
-                kDownloader.pause(downloadId2)
-            }
-        }
-
-
-        // REQUEST3
-
-        binding.fileName3.text = "docu.pdf"
-        binding.startCancelButton3.setOnClickListener {
-            if (binding.startCancelButton3.text.equals("Start")) {
-                downloadId3 = kDownloader.enqueue(request3,
-                    onStart = {
-                        binding.status3.text = "Started"
-                        binding.startCancelButton3.text = "Cancel"
-                        binding.resumePauseButton3.isEnabled = true
-                        binding.resumePauseButton3.visibility = View.VISIBLE
-                    },
-                    onPause = {
-                        binding.status3.text = "Paused"
-                    },
-                    onProgress = {
-                        binding.status3.text = "In Progress"
-                        binding.progressBar3.progress = it
-                        binding.progressText3.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status3.text = "Completed"
-                        binding.progressText3.text = "100%"
-                        binding.startCancelButton3.visibility = View.GONE
-                        binding.resumePauseButton3.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status3.text = "Error : $it"
-                        binding.resumePauseButton3.visibility = View.GONE
-                        binding.progressBar3.progress = 0
-                        binding.progressText3.text = "0%"
-                    }
-                )
-            } else {
-                kDownloader.cancel(downloadId3)
-                binding.startCancelButton3.text = "Start"
-            }
-        }
-
-        binding.resumePauseButton3.setOnClickListener{
-            if (kDownloader.status(downloadId3) == Status.PAUSED) {
-                binding.resumePauseButton3.text = "Pause"
-                kDownloader.resume(downloadId3)
-            } else {
-                binding.resumePauseButton3.text = "Resume"
-                kDownloader.pause(downloadId3)
-            }
-        }
-
-
-
-        // REQUEST4
-
-
-        binding.fileName4.text = "giphy.gif"
-        binding.startCancelButton4.setOnClickListener {
-            if (binding.startCancelButton4.text.equals("Start")) {
-                downloadId4 = kDownloader.enqueue(request4,
-                    onStart = {
-                        binding.status4.text = "Started"
-                        binding.startCancelButton4.text = "Cancel"
-                        binding.resumePauseButton4.isEnabled = true
-                        binding.resumePauseButton4.visibility = View.VISIBLE
-                    },
-                    onPause = {
-                        binding.status4.text = "Paused"
-                    },
-                    onProgress = {
-                        binding.status4.text = "In Progress"
-                        binding.progressBar4.progress = it
-                        binding.progressText4.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status4.text = "Completed"
-                        binding.progressText4.text = "100%"
-                        binding.startCancelButton4.visibility = View.GONE
-                        binding.resumePauseButton4.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status4.text = "Error : $it"
-                        binding.resumePauseButton4.visibility = View.GONE
-                        binding.progressBar4.progress = 0
-                        binding.progressText4.text = "0%"
-                    }
-                )
-            } else {
-                kDownloader.cancel(downloadId4)
-                binding.startCancelButton4.text = "Start"
-            }
-        }
-
-        binding.resumePauseButton4.setOnClickListener{
-            if (kDownloader.status(downloadId4) == Status.PAUSED) {
-                binding.resumePauseButton4.text = "Pause"
-                kDownloader.resume(downloadId4)
-            } else {
-                binding.resumePauseButton4.text = "Resume"
-                kDownloader.pause(downloadId4)
-            }
-        }
-
-
-
-        // REQUEST 5
-
-        binding.fileName5.text = "1GB.bin"
-        binding.startCancelButton5.setOnClickListener {
-            if (binding.startCancelButton5.text.equals("Start")) {
-                downloadId5 = kDownloader.enqueue(request5,
-                    onStart = {
-                        binding.status5.text = "Started"
-                        binding.startCancelButton5.text = "Cancel"
-                        binding.resumePauseButton5.isEnabled = true
-                        binding.resumePauseButton5.visibility = View.VISIBLE
-                    },
-                    onPause = {
-                        binding.status5.text = "Paused"
-                    },
-                    onProgress = {
-                        binding.status5.text = "In Progress"
-                        binding.progressBar5.progress = it
-                        binding.progressText5.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status5.text = "Completed"
-                        binding.progressText5.text = "100%"
-                        binding.startCancelButton5.visibility = View.GONE
-                        binding.resumePauseButton5.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status5.text = "Error : $it"
-                        binding.resumePauseButton5.visibility = View.GONE
-                        binding.progressBar5.progress = 0
-                        binding.progressText5.text = "0%"
-                    }
-                )
-            } else {
-                kDownloader.cancel(downloadId5)
-                binding.startCancelButton5.text = "Start"
-            }
-        }
-
-        binding.resumePauseButton5.setOnClickListener {
-            if (kDownloader.status(downloadId5) == Status.PAUSED) {
-                binding.resumePauseButton5.text = "Pause"
-                kDownloader.resume(downloadId5)
-            } else {
-                binding.resumePauseButton5.text = "Resume"
-                kDownloader.pause(downloadId5)
-            }
-        }
-
-
-
-
-        // REQUEST6
-
-        binding.fileName6.text = "music.mp3"
-        binding.startCancelButton6.setOnClickListener {
-            if (binding.startCancelButton6.text.equals("Start")) {
-                downloadId6 = kDownloader.enqueue(request6,
-                    onStart = {
-                        binding.status6.text = "Started"
-                        binding.startCancelButton6.text = "Cancel"
-                        binding.resumePauseButton6.isEnabled = true
-                        binding.resumePauseButton6.visibility = View.VISIBLE
-                    },
-                    onPause = {
-                        binding.status6.text = "Paused"
-                    },
-                    onProgress = {
-                        binding.status6.text = "In Progress"
-                        binding.progressBar6.progress = it
-                        binding.progressText6.text = "$it%"
-                    },
-                    onCompleted = {
-                        binding.status6.text = "Completed"
-                        binding.progressText6.text = "100%"
-                        binding.startCancelButton6.visibility = View.GONE
-                        binding.resumePauseButton6.visibility = View.GONE
-                    },
-                    onError = {
-                        binding.status6.text = "Error : $it"
-                        binding.resumePauseButton6.visibility = View.GONE
-                        binding.progressBar6.progress = 0
-                        binding.progressText6.text = "0%"
-                    }
-                )
-            } else {
-                kDownloader.cancel(downloadId6)
-                binding.startCancelButton6.text = "Start"
-            }
-        }
-
-        binding.resumePauseButton6.setOnClickListener{
-            if (kDownloader.status(downloadId6) == Status.PAUSED) {
-                binding.resumePauseButton6.text = "Pause"
-                kDownloader.resume(downloadId6)
-            } else {
-                binding.resumePauseButton6.text = "Resume"
-                kDownloader.pause(downloadId6)
-            }
-        }
-
     }
 }
+

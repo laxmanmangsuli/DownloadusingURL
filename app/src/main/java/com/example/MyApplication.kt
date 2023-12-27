@@ -1,6 +1,7 @@
 package com.example
 
 import android.app.Application
+import android.content.Context
 import com.kdownloader.KDownloader
 
 class MyApplication : Application() {
