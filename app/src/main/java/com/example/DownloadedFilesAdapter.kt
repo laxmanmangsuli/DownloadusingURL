@@ -1,5 +1,6 @@
 package com.example
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -10,7 +11,7 @@ import com.kdownloader.KDownloader
 import com.kdownloader.Status
 import com.kdownloader.internal.DownloadRequest
 
-class DownloadedFilesAdapter() :
+class DownloadedFilesAdapter(context: Context) :
     RecyclerView.Adapter<DownloadedFilesAdapter.ViewHolder>() {
 
     private var downloadedFiles = mutableListOf<DownloadedFile>()
@@ -31,37 +32,44 @@ class DownloadedFilesAdapter() :
         val context = holder.itemView.context
         val kDownloader = KDownloader.create(context)
         val enqueue = downloadedFiles[position].request
-        handleDownloadRequest(position, holder, enqueue, kDownloader)
+        handleDownloadRequest(position, holder, enqueue, kDownloader,context)
     }
 
     override fun getItemCount(): Int {
         return downloadedFiles.size
     }
 
-    private fun handleDownloadRequest(position: Int, holder: ViewHolder, enqueue: DownloadRequest, kDownloader: KDownloader) {
+    @SuppressLint("SetTextI18n")
+    private fun handleDownloadRequest(
+        position: Int,
+        holder: ViewHolder,
+        enqueue: DownloadRequest,
+        kDownloader: KDownloader,
+        context: Context
+    ) {
         var downloadId = downloadedFiles[position].id ?: 0
         holder.binding.fileName6.text = downloadedFiles[position].fileName
         holder.binding.startCancelButton6.setOnClickListener {
             if (holder.binding.startCancelButton6.text == "Start") {
                 downloadId = kDownloader.enqueue(enqueue,
                     onStart = {
-                        holder.binding.status6.text = "Started"
-                        holder.binding.startCancelButton6.text = "Cancel"
+                        holder.binding.status6.text = context.getString(R.string.start)
+                        holder.binding.startCancelButton6.text = context.getText(R.string.cancel)
                         holder.binding.resumePauseButton6.isEnabled = true
                         holder.binding.resumePauseButton6.visibility = View.VISIBLE
-                        holder.binding.resumePauseButton6.text = "pause"
+                        holder.binding.resumePauseButton6.text = context.getString(R.string.pause)
                         downloadedFiles[position].id = downloadId
                     },
                     onPause = {
-                        holder.binding.status6.text = "Paused"
+                        holder.binding.status6.text = context.getString(R.string.paused)
                     },
                     onProgress = {
-                        holder.binding.status6.text = "In Progress"
+                        holder.binding.status6.text = context.getString(R.string.inProgress)
                         holder.binding.progressBar6.progress = it
                         holder.binding.progressText6.text = "$it%"
                     },
                     onCompleted = {
-                        holder.binding.status6.text = "Completed"
+                        holder.binding.status6.text = context.getString(R.string.complete)
                         holder.binding.progressText6.text = "100%"
                         holder.binding.startCancelButton6.visibility = View.GONE
                         holder.binding.resumePauseButton6.visibility = View.GONE
@@ -75,7 +83,7 @@ class DownloadedFilesAdapter() :
                 )
             } else {
                 kDownloader.cancel(downloadId)
-                holder.binding.startCancelButton6.text = "Start"
+                holder.binding.startCancelButton6.text = context.getString(R.string.starts)
                 holder.binding.resumePauseButton6.visibility = View.GONE
                 holder.binding.resumePauseButton6.isEnabled =false
             }
@@ -83,10 +91,10 @@ class DownloadedFilesAdapter() :
 
         holder.binding.resumePauseButton6.setOnClickListener {
             if (kDownloader.status(downloadId) == Status.PAUSED) {
-                holder.binding.resumePauseButton6.text = "pause"
+                holder.binding.resumePauseButton6.text = context.getString(R.string.pause)
                 kDownloader.resume(downloadId)
             } else {
-                holder.binding.resumePauseButton6.text = "Resume"
+                holder.binding.resumePauseButton6.text = context.getString(R.string.resume)
                 kDownloader.pause(downloadId)
             }
         }

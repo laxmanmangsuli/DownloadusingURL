@@ -13,7 +13,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="10dp"
-        android:text="file.mp4"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@+id/startCancelButton6"
@@ -60,44 +59,25 @@
         android:id="@+id/startCancelButton6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Start"
+        android:text="@string/starts"
+        android:textAllCaps="false"
         android:textSize="12sp"
         android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-<!--    <Button-->
-<!--        android:id="@+id/cancel_button6"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:visibility="gone"-->
-<!--        android:text="cancel"-->
-<!--        android:textSize="12sp"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent" />-->
 
     <Button
         android:id="@+id/resumePauseButton6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
+        android:layout_marginStart="20dp"
+        android:textAllCaps="false"
         android:layout_marginTop="10dp"
         android:enabled="false"
-        android:text="Pause"
+        android:text="@string/pause"
         android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progressBar6" />
-<!--    <Button-->
-<!--        android:id="@+id/resume_button6"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginLeft="20dp"-->
-<!--        android:layout_marginTop="10dp"-->
-<!--        android:enabled="false"-->
-<!--        android:visibility="gone"-->
-<!--        android:text="Resume"-->
-<!--        android:textSize="12sp"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintTop_toBottomOf="@id/progressBar6" />-->
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"

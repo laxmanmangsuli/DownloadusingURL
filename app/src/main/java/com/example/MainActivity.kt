@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         kDownloader = KDownloader.create(this)
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = DownloadedFilesAdapter()
+        adapter = DownloadedFilesAdapter(this)
         recyclerView.adapter = adapter
 
         if (ContextCompat.checkSelfPermission(

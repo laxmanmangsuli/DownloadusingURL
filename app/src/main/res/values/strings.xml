@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Multiple Download using URL</string>
+    <string name="start">Started</string>
+    <string name="cancel">Cancel</string>
+    <string name="paused">Paused</string>
+    <string name="inProgress">In Progress</string>
+    <string name="complete">Completed</string>
+    <string name="resume">Resume</string>
+    <string name="download">Download</string>
+    <string name="pause">Pause</string>
+    <string name="starts">Start</string>
 </resources>
