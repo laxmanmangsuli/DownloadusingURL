@@ -10,7 +10,7 @@ import com.kdownloader.KDownloader
 import com.kdownloader.Status
 import com.kdownloader.internal.DownloadRequest
 
-class DownloadedFilesAdapter(private val context: Context) :
+class DownloadedFilesAdapter() :
     RecyclerView.Adapter<DownloadedFilesAdapter.ViewHolder>() {
 
     private var downloadedFiles = mutableListOf<DownloadedFile>()
@@ -49,6 +49,7 @@ class DownloadedFilesAdapter(private val context: Context) :
                         holder.binding.startCancelButton6.text = "Cancel"
                         holder.binding.resumePauseButton6.isEnabled = true
                         holder.binding.resumePauseButton6.visibility = View.VISIBLE
+                        holder.binding.resumePauseButton6.text = "pause"
                         downloadedFiles[position].id = downloadId
                     },
                     onPause = {
@@ -75,12 +76,14 @@ class DownloadedFilesAdapter(private val context: Context) :
             } else {
                 kDownloader.cancel(downloadId)
                 holder.binding.startCancelButton6.text = "Start"
+                holder.binding.resumePauseButton6.visibility = View.GONE
+                holder.binding.resumePauseButton6.isEnabled =false
             }
         }
 
         holder.binding.resumePauseButton6.setOnClickListener {
             if (kDownloader.status(downloadId) == Status.PAUSED) {
-                holder.binding.resumePauseButton6.text = "Pause"
+                holder.binding.resumePauseButton6.text = "pause"
                 kDownloader.resume(downloadId)
             } else {
                 holder.binding.resumePauseButton6.text = "Resume"

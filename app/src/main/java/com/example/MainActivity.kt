@@ -13,22 +13,27 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.databinding.ActivityMainBinding
 import com.kdownloader.KDownloader
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
-
-
     private lateinit var binding: ActivityMainBinding
-    val REQUEST_WRITE_PERMISSION = 101
-    val STORAGE_PERMISSION_REQUEST_CODE = 10
+    private val REQUEST_WRITE_PERMISSION = 101
+    private val STORAGE_PERMISSION_REQUEST_CODE = 10
     private lateinit var kDownloader: KDownloader
     private lateinit var dirPath: String
+    private lateinit var adapter :DownloadedFilesAdapter
     private var urlCounterMap: MutableMap<String, Int> = mutableMapOf()
+    private val itemList = mutableListOf<DownloadedFile>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         kDownloader = KDownloader.create(this)
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        adapter = DownloadedFilesAdapter()
+        recyclerView.adapter = adapter
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -53,40 +58,28 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val itemList = mutableListOf<DownloadedFile>()
-
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-
-        val adapter = DownloadedFilesAdapter(this)
-        recyclerView.adapter = adapter
-
-
-
-
-
         binding.btnDownload.setOnClickListener {
             val url = binding.url.text.toString().trim()
+            downloadFile(url)
+        }
+    }
 
-            dirPath = Environment.getExternalStorageDirectory().path + "/Download"
+    private fun downloadFile(url: String) {
+        if (url.isNotEmpty()) {
+            dirPath = Environment.getExternalStorageDirectory().toString() + "/Download/multipleDownloader/"
+            val file = File(Environment.getExternalStorageDirectory().toString() + "/Download/multipleDownloader/")
+            if (!file.exists()) {
+                file.mkdirs()
+            }
             val uri = Uri.parse(url)
             var fileName = uri.lastPathSegment ?: "defaultFileName"
             val counter = urlCounterMap[url] ?: 0
-            fileName = if (counter!! >= 1) {
-                "${
-                    uri.lastPathSegment?.substringBeforeLast(
-                        '.',
-                        ""
-                    )
-                }($counter).${fileName.substringAfterLast('.', "")}"
-            } else {
-                "${uri.lastPathSegment?.substringBeforeLast('.', "")}.${
-                    fileName.substringAfterLast(
-                        '.',
-                        ""
-                    )
-                }"
+            fileName = if (counter >= 1) {
+                "${uri.lastPathSegment?.substringBeforeLast('.', "")}($counter).${fileName.substringAfterLast('.', "")}"
+            } else { "${uri.lastPathSegment?.substringBeforeLast('.', "")
+            }.${fileName.substringAfterLast('.', "")}"
             }
+            urlCounterMap[url] = counter + 1
 
             val requestBuilder = when (fileName.substringAfterLast('.', "").toLowerCase()) {
                 "mp4" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
@@ -98,18 +91,30 @@ class MainActivity : AppCompatActivity() {
                 "mp3" -> kDownloader.newRequestBuilder(url, dirPath, fileName)
                 else -> {
                     Toast.makeText(this, "Unsupported file type", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
+                    return
                 }
             }.build()
-            itemList.add(DownloadedFile(url=url, request = requestBuilder, fileName = fileName))
-            adapter.addDownloadTask(DownloadedFile(url=url, request = requestBuilder, fileName = fileName))
+            itemList.add(
+                DownloadedFile(
+                    url = url,
+                    request = requestBuilder,
+                    fileName = fileName
+                )
+            )
+            adapter.addDownloadTask(
+                DownloadedFile(
+                    url = url,
+                    request = requestBuilder,
+                    fileName = fileName
+                )
+            )
             binding.url.text.clear()
+            requestPermission()
 
+        }else{
+            Toast.makeText(this,"URL is Empty",Toast.LENGTH_SHORT).show()
         }
-        requestPermission()
     }
-
-
 
 
     private fun requestPermission() {
